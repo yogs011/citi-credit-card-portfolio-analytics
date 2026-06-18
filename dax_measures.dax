@@ -1,0 +1,147 @@
+// =========================================================================
+// Credit Card Financial Portfolio Analytics - DAX Measure Definitions
+// Author: Yogesh Birla
+// Repository: https://github.com/yogs011/citi-credit-card-portfolio-analytics
+// Tool: Power BI Desktop / DAX Studio
+// =========================================================================
+
+// --- 1. CORE FINANCIAL & REVENUE MEASURES ---
+
+// Total Net Revenue generated across interest, annual fees, and transaction volume
+Total_Revenue = 
+    SUM(fact_credit_card[Annual_Fees]) + 
+    SUM(fact_credit_card[Total_Trans_Amt]) + 
+    SUM(fact_credit_card[Interest_Earned])
+
+// Total Interest Earned
+Total_Interest_Earned = 
+    SUM(fact_credit_card[Interest_Earned])
+
+// Total Annual Fees Collected
+Total_Annual_Fees = 
+    SUM(fact_credit_card[Annual_Fees])
+
+// Total Transaction Spend Volume ($)
+Total_Transaction_Amount = 
+    SUM(fact_credit_card[Total_Trans_Amt])
+
+// Total Transaction Volume (Count)
+Total_Transaction_Volume = 
+    SUM(fact_credit_card[Total_Trans_Vol])
+
+// Total Credit Limit Extended
+Total_Credit_Limit = 
+    SUM(fact_credit_card[Credit_Limit])
+
+
+// --- 2. RISK & UTILIZATION MEASURES ---
+
+// Portfolio Delinquency Rate (%)
+Delinquency_Rate = 
+    DIVIDE(
+        CALCULATE(COUNTROWS(fact_credit_card), fact_credit_card[Delinquent_Acc] = 1),
+        COUNTROWS(fact_credit_card),
+        0
+    )
+
+// Total Delinquent Accounts
+Delinquent_Accounts_Count = 
+    CALCULATE(
+        DISTINCTCOUNT(fact_credit_card[Client_Num]),
+        fact_credit_card[Delinquent_Acc] = 1
+    )
+
+// Average Credit Card Utilization Ratio
+Avg_Credit_Utilization = 
+    AVERAGE(fact_credit_card[Avg_Utilization_Ratio])
+
+// Average Revolving Balance per Account
+Avg_Revolving_Balance = 
+    AVERAGE(fact_credit_card[Total_Revolving_Bal])
+
+// Customer Acquisition Cost (CAC) Total
+Total_Customer_Acquisition_Cost = 
+    SUM(fact_credit_card[Customer_Acq_Cost])
+
+
+// --- 3. TIME INTELLIGENCE & WEEK-OVER-WEEK (WoW) KPIS ---
+
+// Current Week Revenue (Dynamic Selection / Latest Week)
+Current_Week_Revenue = 
+    VAR MaxWeekNum = MAX(dim_date[Week_Num_Int])
+    VAR MaxYear = MAX(dim_date[Current_Year])
+    RETURN
+        CALCULATE(
+            [Total_Revenue],
+            dim_date[Week_Num_Int] = MaxWeekNum,
+            dim_date[Current_Year] = MaxYear
+        )
+
+// Previous Week Revenue
+Previous_Week_Revenue = 
+    VAR CurrentWeekNum = MAX(dim_date[Week_Num_Int])
+    VAR CurrentYear = MAX(dim_date[Current_Year])
+    RETURN
+        CALCULATE(
+            [Total_Revenue],
+            dim_date[Week_Num_Int] = CurrentWeekNum - 1,
+            dim_date[Current_Year] = CurrentYear
+        )
+
+// Week-over-Week (WoW) Revenue Growth (%)
+WoW_Revenue_Growth = 
+    DIVIDE(
+        [Current_Week_Revenue] - [Previous_Week_Revenue],
+        [Previous_Week_Revenue],
+        0
+    )
+
+// Year-over-Year (YoY) Revenue Growth (%)
+YoY_Revenue_Growth = 
+    VAR CurrentYearRevenue = [Total_Revenue]
+    VAR PreviousYearRevenue = 
+        CALCULATE(
+            [Total_Revenue],
+            SAMEPERIODLASTYEAR(dim_date[Date])
+        )
+    RETURN
+        DIVIDE(
+            CurrentYearRevenue - PreviousYearRevenue,
+            PreviousYearRevenue,
+            0
+        )
+
+// 4-Week Moving Average Revenue
+Four_Week_Moving_Average_Revenue = 
+    AVERAGEX(
+        DATESINPERIOD(
+            dim_date[Date],
+            LASTDATE(dim_date[Date]),
+            -28,
+            DAY
+        ),
+        [Total_Revenue]
+    )
+
+
+// --- 4. CUSTOMER SEGMENTATION & AVERAGE SPEND MEASURES ---
+
+// Average Revenue Per User (ARPU)
+ARPU = 
+    DIVIDE(
+        [Total_Revenue],
+        DISTINCTCOUNT(fact_credit_card[Client_Num]),
+        0
+    )
+
+// Average Transaction Ticket Size ($)
+Avg_Transaction_Size = 
+    DIVIDE(
+        [Total_Transaction_Amount],
+        [Total_Transaction_Volume],
+        0
+    )
+
+// Customer Satisfaction Average Rating (CSAT)
+Avg_Customer_Satisfaction = 
+    AVERAGE(dim_customer[Cust_Satisfaction_Score])
