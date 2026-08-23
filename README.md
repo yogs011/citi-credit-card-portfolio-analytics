@@ -4,7 +4,7 @@
 
 ---
 
-## 📌 Project Architecture & Overview
+## Project Architecture And Overview
 Architected an end-to-end financial analytics pipeline for **10,000+ credit card accounts** and **$55M+ in transaction volume**, performing data cleansing, normalization, and Star Schema data modeling across transaction and demographic data.
 
 ```mermaid
